@@ -24,8 +24,8 @@ Exclusão de colunas que causam data leakage.<p><br>
 **2. Criação da Variável-Alvo** <p>
 Definição: atraso: ≥ 15 minutos<br>
 Distribuição:<br>
-- Pontual (0): 81,39%<br>
--	Atrasado (1): 18,61%<br>
+- Pontual (0): 81,62%<br>
+-	Atrasado (1): 18,38%<br>
 
 Dataset desbalanceado → uso de class_weight e scale_pos_weight<p><br>
 
