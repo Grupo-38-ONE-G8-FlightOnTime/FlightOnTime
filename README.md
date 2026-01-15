@@ -1,55 +1,88 @@
-# 📊 FlightOnTime – Data Science
-&nbsp;
-## **✈️ Contexto**
-O setor aéreo sofre diariamente com atrasos de voos, que geram:<p>
-•	Insatisfação dos passageiros;<br>
-•	Custos extras para companhias aéreas;<br>
-•	Problemas de logística em aeroportos.<br>
-<p>
-  
-O projeto **FlightOnTime** busca prever se um voo será **Pontual (0)** ou **Atrasado (1)**, com base em dados históricos e operacionais.&nbsp;<p>
-&nbsp;
-## **🎯 Objetivo**
-Construir um **MVP (produto mínimo viável)** que:<p>
-•	Recebe dados de um voo (companhia, origem, destino, data/hora);<br>
-•	Retorna uma previsão binária: Pontual ou Atrasado;<br>
-•	Exporta o modelo treinado para ser consumido pelo Back-End via API REST.<br>
-&nbsp;
-## **🗂️ Etapas do Notebook**
-**1. Exploração e Limpeza de Dados (EDA)** <p>
-Dataset: [Flight Delays 2015 – US DOT](https://www.kaggle.com/datasets/usdot/flight-delays)<br>
-Remoção de voos cancelados e desviados;<br>
-Exclusão de colunas que causam data leakage.<p><br>
+# FlightOnTime
 
-**2. Criação da Variável-Alvo** <p>
-Definição: atraso: ≥ 15 minutos<br>
-Distribuição:<br>
-- Pontual (0): 81,62%<br>
--	Atrasado (1): 18,38%<br>
+Projeto para prever atraso de voos. Monorepo com Data Science, microservico Python e backend Java.
 
-Dataset desbalanceado → uso de class_weight e scale_pos_weight<p><br>
+## Estrutura
+- data_science/: notebook e modelo treinado
+- microservice/: FastAPI que faz a previsao
+- backend/: Spring Boot que expoe a API e chama o microservico
 
-**3. Modelagem Preditiva** <p>
-Logistic Regression (baseline)<br>
-XGBoost (modelo avançado)<br>
-Pipeline com ColumnTransformer + OneHotEncoder<p><br>
+## Requisitos
+- Python 3.9+
+- Java 21
+- Maven (ou mvnw)
 
-**4. Avaliação dos Modelos** <p>
-Métricas: Acurácia, Precisão, Recall, F1-score, ROC AUC;<br>
-Matriz de confusão para análise de erros<p><br>
+## Como rodar (local)
 
-**5. Exportação do Modelo** <p>
-Arquivo gerado: flight_model.pkl via joblib.dump()<p><br>
+### 1) Microservico (FastAPI)
+```powershell
+cd C:\Users\DTI\Desktop\FlightOnTime
+pip install -r microservice\requirements.txt
+$env:MODEL_PATH="data_science\modelo\modelo_final.joblib"
+uvicorn microservice.app:app --reload --host 0.0.0.0 --port 8000
+```
 
+### 2) Backend (Spring Boot)
+```powershell
+cd C:\Users\DTI\Desktop\FlightOnTime\backend
+$env:DATASCIENCE_BASE_URL="http://localhost:8000"
+.\mvnw spring-boot:run
+```
 
-## **📊 Resultados Obtidos**				
-**📌 Conclusão:** O XGBoost apresentou melhor desempenho, especialmente em Recall e F1-score da classe minoritária (Atrasado). Ele foi escolhido como modelo final para exportação e integração com o Back-End.<p>
-&nbsp;
+## Contrato da API (backend)
 
-**⚙️ Como Executar**<p>
-1.	Clone o repositório: [FlightOnTime.ipynb](https://github.com/Grupo-38-ONE-G8-FlightOnTime/Data_Science/blob/main/FlightOnTime.ipynb);<br>
-2.	Abra o notebook no Jupyter ou Google Colab.<br>
-3.	Execute todas as células para:<br>
-•	Explorar os dados<br>
-•	Treinar o modelo<br>
-•	Exportar flight_model.pkl<br>
+### POST /predict
+Body:
+```json
+{
+  "companhia": "AZ",
+  "origem": "GIG",
+  "destino": "GRU",
+  "data_partida": "2025-11-10T14:30:00",
+  "distancia_km": 350
+}
+```
+
+Response:
+```json
+{
+  "previsao": "Atrasado",
+  "probabilidade": 0.78
+}
+```
+
+### GET /stats
+Response:
+```json
+{
+  "total": 10,
+  "atrasados": 3,
+  "pontuais": 7,
+  "percentual_atraso": 0.3
+}
+```
+
+## Persistencia (H2)
+- O backend salva as previsoes em um banco H2 local.
+- Arquivo gerado em `backend/data/flightontime.mv.db`.
+- Console H2: `http://localhost:8081/h2-console` (JDBC URL: `jdbc:h2:file:./data/flightontime`).
+
+## Docker (opcional)
+```powershell
+docker compose up --build
+```
+
+## Endpoints
+- GET http://localhost:8000/health (microservice)
+- POST http://localhost:8000/predict (microservice)
+- GET http://localhost:8081/health (backend)
+- POST http://localhost:8081/predict (backend)
+- GET http://localhost:8081/stats (backend)
+
+## Dataset
+- Flight Delays 2015 - US DOT: https://www.kaggle.com/datasets/usdot/flight-delays
+
+## Observacoes
+- O microservico usa o modelo em `data_science/modelo/modelo_final.joblib` por padrao. Use `MODEL_PATH` para sobrescrever.
+- O backend usa `datascience.base-url` (ou `DATASCIENCE_BASE_URL`) para chamar o microservico.
+

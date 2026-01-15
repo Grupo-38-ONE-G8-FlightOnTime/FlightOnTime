@@ -1,0 +1,29 @@
+# Java
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tool logs
+**/.github/java-upgrade/
+
+# Backend data
+backend/data/
+# Logs
+logs/

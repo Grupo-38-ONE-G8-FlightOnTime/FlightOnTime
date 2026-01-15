@@ -39,13 +39,13 @@ class PredictResponse(BaseModel):
 def load_model():
     global MODEL, THRESHOLD, FINAL_FEATURES, MAPS, FALLBACKS
 
-    model_path = os.getenv("MODEL_PATH", "modelo_final.joblib")
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    default_model_path = os.path.abspath(os.path.join(base_dir, "..", "data_science", "modelo", "modelo_final.joblib"))
+    model_path = os.getenv("MODEL_PATH", default_model_path)
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"Model file not found: {model_path}. Set MODEL_PATH to the joblib file."
-        )
-
-    artifacts = joblib.load(model_path)
+        )    artifacts = joblib.load(model_path)
     MODEL = artifacts["model"]
     THRESHOLD = float(artifacts["threshold"])
     FINAL_FEATURES = artifacts.get("final_features")
@@ -131,3 +131,12 @@ def predict(payload: PredictRequest):
         previsao=previsao,
         probabilidade=round(probabilidade, 4),
     )
+
+
+
+
+
+
+
+
+
