@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
@@ -15,6 +14,17 @@ THRESHOLD = 0.5
 FINAL_FEATURES = None
 MAPS = None
 FALLBACKS = None
+
+
+
+def classificar_periodo(hora):
+    if 0 <= hora <= 5:
+        return "madrugada"
+    if 6 <= hora <= 11:
+        return "manha"
+    if 12 <= hora <= 17:
+        return "tarde"
+    return "noite"
 
 
 class PredictRequest(BaseModel):
@@ -45,7 +55,8 @@ def load_model():
     if not os.path.exists(model_path):
         raise FileNotFoundError(
             f"Model file not found: {model_path}. Set MODEL_PATH to the joblib file."
-        )    artifacts = joblib.load(model_path)
+        )
+    artifacts = joblib.load(model_path)
     MODEL = artifacts["model"]
     THRESHOLD = float(artifacts["threshold"])
     FINAL_FEATURES = artifacts.get("final_features")
@@ -65,6 +76,8 @@ def build_features(payload: PredictRequest) -> pd.DataFrame:
     departure_minute = dt.minute
     departure_minutes_since_midnight = departure_hour * 60 + departure_minute
     is_weekend = 1 if day_of_week in (6, 7) else 0
+    periodo_dia = classificar_periodo(departure_hour)
+    is_peak_hour = 1 if departure_hour in (6, 7, 8, 9, 16, 17, 18, 19) else 0
 
     airline = payload.companhia
     origin = payload.origem
@@ -73,18 +86,39 @@ def build_features(payload: PredictRequest) -> pd.DataFrame:
     distance_miles = float(payload.distancia_km) * KM_TO_MILES
 
     route = f"{origin}_{destination}"
-    origin_delay_mean = MAPS["origin_delay_mean_map"].get(
-        origin, FALLBACKS["global_origin_mean"]
+    origin_delay_mean = MAPS.get("origin_delay_mean_map", {}).get(
+        origin, FALLBACKS.get("global_origin_mean", 0.0)
     )
-    dest_delay_mean = MAPS["dest_delay_mean_map"].get(
-        destination, FALLBACKS["global_dest_mean"]
+    dest_delay_mean = MAPS.get("dest_delay_mean_map", {}).get(
+        destination, FALLBACKS.get("global_dest_mean", 0.0)
     )
-    route_delay_mean = MAPS["route_delay_mean_map"].get(
-        route, FALLBACKS["global_route_mean"]
+    route_delay_mean = MAPS.get("route_delay_mean_map", {}).get(
+        route, FALLBACKS.get("global_route_mean", 0.0)
     )
-    route_flight_count = MAPS["route_flight_count_map"].get(
-        route, FALLBACKS["default_route_count"]
+    origin_flight_count = MAPS.get("origin_flight_count_map", {}).get(
+        origin, FALLBACKS.get("default_origin_count", 0.0)
     )
+    dest_flight_count = MAPS.get("dest_flight_count_map", {}).get(
+        destination, FALLBACKS.get("default_dest_count", 0.0)
+    )
+    route_flight_count = MAPS.get("route_flight_count_map", {}).get(
+        route, FALLBACKS.get("default_route_count", 0.0)
+    )
+
+    airport_country_map = MAPS.get("airport_country_map", {})
+    airport_lat_map = MAPS.get("airport_lat_map", {})
+    airport_lon_map = MAPS.get("airport_lon_map", {})
+
+    global_airport_country = FALLBACKS.get("global_airport_country", "UNK")
+    global_airport_lat = float(FALLBACKS.get("global_airport_lat", 0.0))
+    global_airport_lon = float(FALLBACKS.get("global_airport_lon", 0.0))
+
+    origin_country = airport_country_map.get(origin, global_airport_country)
+    dest_country = airport_country_map.get(destination, global_airport_country)
+    origin_lat = float(airport_lat_map.get(origin, global_airport_lat))
+    origin_lon = float(airport_lon_map.get(origin, global_airport_lon))
+    dest_lat = float(airport_lat_map.get(destination, global_airport_lat))
+    dest_lon = float(airport_lon_map.get(destination, global_airport_lon))
 
     row = {
         "AIRLINE": airline,
@@ -97,9 +131,19 @@ def build_features(payload: PredictRequest) -> pd.DataFrame:
         "DEPARTURE_MINUTE": departure_minute,
         "DEPARTURE_MINUTES_SINCE_MIDNIGHT": departure_minutes_since_midnight,
         "IS_WEEKEND": is_weekend,
+        "PERIODO_DIA": periodo_dia,
+        "IS_PEAK_HOUR": is_peak_hour,
+        "ORIGIN_COUNTRY": origin_country,
+        "DEST_COUNTRY": dest_country,
+        "ORIGIN_LAT": origin_lat,
+        "ORIGIN_LON": origin_lon,
+        "DEST_LAT": dest_lat,
+        "DEST_LON": dest_lon,
         "ORIGIN_DELAY_MEAN": origin_delay_mean,
         "DEST_DELAY_MEAN": dest_delay_mean,
         "ROUTE_DELAY_MEAN": route_delay_mean,
+        "ORIGIN_FLIGHT_COUNT": origin_flight_count,
+        "DEST_FLIGHT_COUNT": dest_flight_count,
         "ROUTE_FLIGHT_COUNT": route_flight_count,
     }
 

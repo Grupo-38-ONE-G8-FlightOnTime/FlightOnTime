@@ -82,7 +82,11 @@ docker compose up --build
 ## Dataset
 - Flight Delays 2015 - US DOT: https://www.kaggle.com/datasets/usdot/flight-delays
 
+- Metadados globais de aeroportos (OurAirports): https://ourairports.com/data/airports.csv
+
 ## Observacoes
+
+- (Opcional) Para enriquecer features globais, salve `airports.csv` na raiz do projeto ou defina `AIRPORTS_CSV_PATH`.
 - O microservico usa o modelo em `data_science/modelo/modelo_final.joblib` por padrao. Use `MODEL_PATH` para sobrescrever.
 - O backend usa `datascience.base-url` (ou `DATASCIENCE_BASE_URL`) para chamar o microservico.
 
